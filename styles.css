@@ -1,0 +1,673 @@
+/* ==========================================================================
+   Hero section — cup-cake bakery
+   All classes are prefixed "hero-" so later components can't collide.
+   Only transform and opacity are animated.
+   Desktop keeps its absolute layout; every mobile size/layout change lives in
+   the @media (max-width: 899px) block at the bottom.
+   ========================================================================== */
+
+/* ---- Minimal reset (kept small on purpose: no global styles beyond this) ---- */
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+img { max-width: 100%; }
+
+/* ---- Palette + hero tokens ---- */
+:root {
+  --cream:   #FBF6EF;
+  --oat:     #F1E6D8;
+  --latte:   #E6D2BC;
+  --taupe:   #D8BCA6;
+  --cocoa:   #4A3228;
+  --mocha:   #7A5A4A;
+  --caramel: #A8683F;
+  --wheat:   #D9BF8C;
+  --rose:    #D9A5A0;
+  --sage:    #A9B49A;
+
+  /* Flavor tints — soft, muted backdrop-disc colours. Edit these to re-tint. */
+  --tint-red-velvet: #E8C4BE;
+  --tint-chocolate:  #D9C3B3;
+  --tint-oreo:       #D6D2CC;
+  --tint-vanilla:    #F3E3B8;
+
+  /* Crumb-burst colours (two tones per flavor). Edit to change the particles. */
+  --crumb-red-velvet-1: #9B2C2C;
+  --crumb-red-velvet-2: #C0474A;
+  --crumb-chocolate-1:  #3B2317;
+  --crumb-chocolate-2:  #5C3A26;
+  --crumb-oreo-1:       #1C1A19;
+  --crumb-oreo-2:       #F4EDE2;
+  --crumb-vanilla-1:    #D9BF8C;
+  --crumb-vanilla-2:    #FBF6EF;
+
+  /* The frosting-drip bottom edge is the colour of the NEXT section. Change
+     --next-section-bg to match whatever you build below the hero. */
+  --next-section-bg: var(--cream);
+  --drip-h: 60px;   /* desktop drip height; mobile overrides to 36px */
+
+  /* Vertical centre of the cupcake zone — the slide, the backdrop disc and the
+     spotlight all key off this so they stay aligned across breakpoints. */
+  --cake-y: 44%;
+
+  /* Active slide width — swap to resize the whole carousel.
+     The 42vh bound keeps cupcakes clear of the info block on short screens.
+     Desktop-only value; mobile overrides it in the max-width:899px block. */
+  --slide-w: min(46vw, 420px, 42vh);
+  --hero-font: "Poppins", "Montserrat", system-ui, sans-serif;
+}
+
+/* ==========================================================================
+   Hero shell
+   ========================================================================== */
+.hero {
+  position: relative;
+  min-height: 100svh;
+  overflow: hidden; /* keeps absolutely-positioned layers inside the viewport */
+  /* Diagonal gradient: latte at the far edges → oat → cream in the middle */
+  background: linear-gradient(135deg,
+    var(--latte) 0%,
+    var(--oat) 22%,
+    var(--cream) 50%,
+    var(--oat) 78%,
+    var(--latte) 100%);
+  font-family: var(--hero-font);
+}
+
+/* ==========================================================================
+   Header row — wordmark (left) + hamburger (right)
+   On desktop the wrapper is inert; both children float absolutely so the
+   existing layout is unchanged. On mobile it becomes a flex row.
+   ========================================================================== */
+.hero-topbar { /* desktop: transparent wrapper (children are absolute) */ }
+
+.hero-wordmark {
+  position: absolute;
+  top: 1.5rem;
+  left: clamp(1rem, 4vw, 3rem);
+  z-index: 5;
+  height: 64px;                 /* same box as the hamburger → they align */
+  display: flex;
+  align-items: center;
+  font-family: "Pacifico", "Segoe Script", "Comic Sans MS", cursive;
+  font-size: 1.1rem;
+  color: var(--cocoa);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.hero-wordmark:focus-visible {
+  outline: 2px solid var(--caramel);
+  outline-offset: 3px;
+}
+
+/* ---- Menu button: chocolate bars, no background shape ---- */
+.hero-menu-btn {
+  position: absolute;
+  top: 1.5rem;
+  right: clamp(1rem, 4vw, 3rem);
+  z-index: 5;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hero-menu-btn:hover { transform: rotate(8deg); }
+.hero-menu-btn span {
+  display: block;
+  width: 28px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--cocoa); /* chocolate bars read on the neutral bg */
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1),
+              opacity 0.3s ease;
+}
+/* bars morph into an X while the panel is open */
+.hero-menu-btn[aria-expanded="true"] span:nth-of-type(1) { transform: translateY(8px) rotate(45deg); }
+.hero-menu-btn[aria-expanded="true"] span:nth-of-type(2) { opacity: 0; transform: scaleX(0.2); }
+.hero-menu-btn[aria-expanded="true"] span:nth-of-type(3) { transform: translateY(-8px) rotate(-45deg); }
+.hero-menu-btn:focus-visible {
+  outline: 2px solid var(--cocoa);
+  outline-offset: 3px;
+}
+
+/* ==========================================================================
+   Headline — sits in the empty space above the cupcakes (all sizes)
+   ========================================================================== */
+.hero-headline {
+  position: absolute;              /* desktop: floats over the top band */
+  top: clamp(4.5rem, 10vh, 6rem);  /* nudged a bit lower (desktop) */
+  left: 0;
+  right: 0;
+  z-index: 5;
+  width: auto;
+  max-width: min(92vw, 1000px);    /* 1 line on desktop, wraps on phones */
+  margin: 0 auto;
+  padding: 0 1rem;
+  font-family: "Pacifico", "Segoe Script", "Comic Sans MS", cursive;
+  font-weight: 400;
+  font-size: clamp(1.9rem, 6.5vw, 3.5rem);
+  line-height: 1.1;
+  color: var(--cocoa);
+  text-align: center;
+  text-wrap: balance;
+}
+.hero-headline-accent { color: var(--caramel); }
+
+/* one-shot entrance: fade + rise 12px (transform & opacity only) */
+@keyframes hero-headline-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-headline { animation: hero-headline-in 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+}
+
+/* ---- Dim overlay behind the panel ---- */
+.hero-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--cocoa) 35%, transparent);
+  opacity: 0;
+  visibility: hidden;              /* not clickable while closed */
+  /* visibility flips only after the fade finishes */
+  transition: opacity 400ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              visibility 0s linear 400ms;
+}
+.hero-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* ---- Slide-in panel from the right ----
+   The wrapper carries the drop-shadow: clip-path on the panel itself would
+   clip a box-shadow, but filter: drop-shadow follows the clipped silhouette. */
+.hero-panel-shadow {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  width: clamp(300px, 34vw, 420px);
+  filter: drop-shadow(-14px 0 26px color-mix(in srgb, var(--cocoa) 22%, transparent));
+  pointer-events: none;          /* wrapper never blocks; panel re-enables */
+}
+.hero-panel {
+  position: absolute;
+  inset: 0;
+  background: var(--cream);
+  /* extra left padding keeps links clear of the frosting-drip edge */
+  padding: 5rem 2.5rem 5rem 4.5rem;
+  overflow-y: auto;
+  pointer-events: auto;
+  /* frosting drips of varying depth along the left edge */
+  clip-path: polygon(100% 0%, 26px 0%,
+    14px 4%, 4px 7%, 14px 10%, 26px 13%,
+    26px 20%,
+    10px 24%, 0px 27%, 10px 30%, 26px 33%,
+    26px 42%,
+    16px 46%, 6px 49%, 16px 52%, 26px 55%,
+    26px 64%,
+    8px 68%, 0px 71%, 8px 74%, 26px 77%,
+    26px 86%,
+    14px 90%, 4px 93%, 14px 96%, 26px 99%,
+    26px 100%, 100% 100%);
+  transform: translateX(100%);
+  visibility: hidden;
+  /* visibility change delayed on close so the slide-out stays visible */
+  transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              visibility 0s linear 400ms;
+}
+.hero-panel.is-open {
+  transform: none;
+  visibility: visible;
+  transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.hero-panel-deco {
+  position: absolute;
+  bottom: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 56px;
+  pointer-events: none;
+}
+
+.hero-panel-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.5rem;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--cocoa);
+}
+.hero-panel-close:hover { color: var(--caramel); }
+.hero-panel-close:focus-visible {
+  outline: 2px solid var(--caramel);
+  outline-offset: 3px;
+}
+
+.hero-panel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+}
+.hero-panel-list a {
+  display: inline-block;           /* so the hover tilt transform applies */
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--cocoa);
+  text-decoration: none;
+  transition: color 200ms ease, transform 200ms ease;
+}
+.hero-panel-list a:hover,
+.hero-panel-list a:focus-visible {
+  color: var(--caramel);
+  transform: rotate(-2deg) translateX(6px); /* playful nudge */
+}
+.hero-panel-list a:focus-visible {
+  outline: 2px solid var(--caramel);
+  outline-offset: 3px;
+}
+
+/* ==========================================================================
+   Carousel
+   ========================================================================== */
+.hero-carousel {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  /* pan-y: horizontal swipes go to our Pointer Events code,
+     vertical gestures keep scrolling the page normally */
+  touch-action: pan-y;
+  cursor: grab;
+}
+.hero-carousel.hero-dragging { cursor: grabbing; }
+.hero-carousel:focus-visible {
+  outline: 2px solid var(--caramel);
+  outline-offset: -4px;
+}
+
+.hero-track { position: absolute; inset: 0; }
+
+/* ---- Slide ---- */
+.hero-slide {
+  position: absolute;
+  left: 50%;
+  top: var(--cake-y);              /* centred in the cupcake zone (see --cake-y) */
+  width: var(--slide-w);
+  margin: 0;
+  user-select: none;
+  /* Snap animation; disabled via .hero-dragging so slides track the finger 1:1 */
+  transition: transform 450ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              opacity  450ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform, opacity;
+}
+.hero-dragging .hero-slide { transition: none; }
+
+.hero-slide img {
+  display: block;
+  position: relative; /* above the ::before placeholder */
+  z-index: 1;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  object-fit: contain;
+  color: transparent;      /* hides alt text if the file is missing */
+  -webkit-user-drag: none;
+  /* depth FX (float / tilt / parallax / squish) — composed by script.js on the
+     ACTIVE slide only, so it layers on top of the carousel's own transform */
+  transform: var(--cake-fx, none);
+}
+.hero-slide.hero-active img { will-change: transform; }
+
+/* ---- Placeholder shown while real cutout images are missing ----
+   script.js adds .hero-img-missing on <img> error; the figure then paints a
+   rounded plate with the flavor name so the layout is reviewable. */
+.hero-slide.hero-img-missing img { visibility: hidden; }
+.hero-slide.hero-img-missing::before {
+  content: attr(data-flavor);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  aspect-ratio: 4 / 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
+  background: var(--oat);
+  border: 1px solid var(--taupe);
+  border-radius: 24px;
+  color: var(--mocha);
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Soft taupe shadow ellipse under each cupcake ----
+   Rests on the base of the cupcake, ~70% of its width, scaling with --slide-w. */
+.hero-slide::after {
+  content: "";
+  position: absolute;
+  left: 15%;
+  width: 70%;
+  height: calc(var(--slide-w) * 0.09); /* scales with the slide */
+  /* sits at the bottom edge of the 4:5 image box */
+  top: calc(var(--slide-w) * 1.25 - 14px);
+  background: radial-gradient(ellipse at center,
+    var(--taupe) 0%, var(--taupe) 45%, transparent 72%);
+  opacity: 0.55;
+  filter: blur(4px);
+  border-radius: 50%;
+  z-index: 0;
+}
+
+/* ==========================================================================
+   Flavor info block — name / description / order CTA.
+   Kept in sync with the active slide by initHeroInfo() in script.js.
+   ========================================================================== */
+.hero-info {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(max(4vh, 26px) + 70px); /* moved up: clear of the 52px thumbnails, closer to the cupcakes */
+  z-index: 4;                          /* above the carousel */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 1.25rem;
+  text-align: center;
+  pointer-events: none;               /* swipes pass through to the carousel */
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+/* fade + slide-out state used while the text swaps (~150ms) */
+.hero-info.hero-info-out {
+  opacity: 0;
+  transform: translateY(8px);
+  transition-duration: 150ms;
+}
+/* dim while the user is actively dragging — pure CSS, no JS needed.
+   (.hero-info is the immediate next sibling of .hero-carousel in the markup) */
+.hero-carousel.hero-dragging + .hero-info { opacity: 0.5; }
+
+.hero-info-name {
+  margin: 0;
+  font-family: "Pacifico", "Segoe Script", "Comic Sans MS", cursive;
+  font-weight: 400;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  line-height: 1.15;
+  color: var(--cocoa);
+}
+.hero-info-price {
+  margin-left: 0.5em;
+  font-family: var(--hero-font);
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--mocha);
+}
+.hero-info-desc {
+  margin: 0;
+  max-width: 40ch;
+  font-size: clamp(0.95rem, 1.6vw, 1.1rem);
+  line-height: 1.5;
+  color: var(--mocha);
+}
+
+/* ---- Order CTA: the one recognizable caramel action button ---- */
+.hero-cta {
+  pointer-events: auto;             /* clickable even though .hero-info passes through */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: 999px;             /* pill */
+  background: var(--caramel);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  text-decoration: none;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--cocoa) 22%, transparent);
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1); /* transform only */
+}
+.hero-cta-icon { width: 18px; height: 18px; flex: none; }
+.hero-cta:hover,
+.hero-cta:focus-visible {
+  background: color-mix(in srgb, var(--caramel) 82%, var(--cocoa)); /* slightly darker */
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--cocoa) 26%, transparent);
+  transform: translateY(-2px) rotate(-1.5deg);                     /* lift + tiny tilt */
+}
+.hero-cta:active { transform: scale(0.97); }                       /* squish */
+.hero-cta:focus-visible {
+  outline: 2px solid var(--cocoa);
+  outline-offset: 3px;
+}
+
+/* ==========================================================================
+   Mini cupcake thumbnails (pagination) — buttons built by script.js.
+   Desktop: 52px, floating in the bottom band. Mobile: 44px, a flex row.
+   ========================================================================== */
+.hero-thumbs {
+  position: absolute;
+  left: 50%;
+  bottom: max(4vh, 26px);
+  transform: translateX(-50%);
+  z-index: 6;
+  display: flex;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 0.6rem;
+}
+.hero-thumb {
+  position: relative;                /* anchor for the active underline bar */
+  flex: none;
+  width: 52px;                       /* desktop size */
+  height: 52px;
+  padding: 4px;
+  border: 1px solid color-mix(in srgb, var(--taupe) 50%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--cream) 70%, transparent);
+  cursor: pointer;
+  opacity: 0.6;
+  transform: scale(0.9);
+  transition: transform 250ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              opacity 250ms cubic-bezier(0.2, 0.8, 0.2, 1),
+              border-color 250ms ease;
+}
+.hero-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+/* missing cutout → small rounded oat square */
+.hero-thumb.hero-thumb-missing img { visibility: hidden; }
+.hero-thumb.hero-thumb-missing { background: var(--oat); }
+
+.hero-thumb:hover,
+.hero-thumb:focus-visible {
+  opacity: 0.9;
+  transform: scale(0.9) translateY(-2px);
+}
+.hero-thumb:focus-visible {
+  outline: 2px solid var(--caramel);
+  outline-offset: 2px;
+}
+/* active flavor */
+.hero-thumb[aria-current="true"] {
+  opacity: 1;
+  border-color: var(--caramel);
+  transform: translateY(-4px) scale(1.05);
+}
+/* 16×3 caramel bar centered below the active thumbnail */
+.hero-thumb[aria-current="true"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 16px;
+  height: 3px;
+  margin-top: 4px;
+  transform: translateX(-50%);
+  border-radius: 2px;
+  background: var(--caramel);
+}
+
+/* ---- Reduced motion: no transitions/animations in the hero ---- */
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide,
+  .hero-info,
+  .hero-cta,
+  .hero-thumb,
+  .hero-panel,
+  .hero-overlay,
+  .hero-menu-btn,
+  .hero-menu-btn span,
+  .hero-panel-list a { transition: none; }
+  .hero-headline { animation: none; }
+}
+
+/* ==========================================================================
+   Short desktop screens (≥900px wide but ≤860px tall, e.g. 1366×768) — use a
+   compact cupcake so the cupcakes, info block and thumbnails all fit in 100svh
+   with no overlap. Scoped to desktop; phones are handled by the mobile block.
+   ========================================================================== */
+@media (min-width: 900px) and (max-height: 860px) {
+  :root { --slide-w: min(44vw, 356px, 35vh); }
+  .hero-slide { top: 39%; }
+  .hero-info { bottom: calc(max(4vh, 26px) + 68px); }
+}
+
+/* ==========================================================================
+   MOBILE — max-width: 899px. Everything below is mobile-only; desktop (≥900px)
+   is untouched. The hero becomes a flex column that fills 100svh with no scroll:
+   header row → headline → carousel (flex:1) → info → thumbnails.
+   ========================================================================== */
+@media (max-width: 899px) {
+  :root { --slide-w: min(78vw, 42svh); }   /* bigger cupcakes on mobile */
+
+  .hero {
+    display: flex;
+    flex-direction: column;
+    height: 100svh;                 /* fixed height → never scrolls */
+    min-height: 0;
+    padding: max(0.75rem, env(safe-area-inset-top)) 1rem
+             max(0.75rem, env(safe-area-inset-bottom));
+    gap: 0.5rem;
+  }
+
+  /* header row */
+  .hero-topbar {
+    position: relative;
+    z-index: 5;
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .hero-wordmark {
+    position: static;
+    height: auto;
+    font-size: 1.05rem;
+  }
+  .hero-menu-btn {
+    position: static;
+    width: 48px;
+    height: 48px;
+  }
+  .hero-menu-btn span { width: 26px; }
+
+  /* headline joins the flow */
+  .hero-headline {
+    position: static;
+    top: auto;
+    width: 100%;
+    max-width: none;
+    flex: none;
+    margin: 0.15rem 0 0;
+    padding: 0;
+    font-size: clamp(1.9rem, 8vw, 2.6rem);
+  }
+
+  /* carousel takes all leftover space */
+  .hero-carousel {
+    position: relative;
+    inset: auto;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+  .hero-slide { top: 50%; }          /* center the cupcake in the carousel band */
+
+  /* info block joins the flow */
+  .hero-info {
+    position: static;
+    bottom: auto;
+    flex: none;
+    gap: 0.5rem;
+    padding: 0;
+  }
+  .hero-info-name { font-size: clamp(1.3rem, 5vw, 1.8rem); }
+  .hero-info-desc {
+    font-size: 0.95rem;
+    max-width: 32ch;
+    line-height: 1.45;
+    /* 3-line safety net */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .hero-cta { width: 100%; max-width: 300px; }
+
+  /* thumbnails join the flow: 44px, four fit on a 320px row */
+  .hero-thumbs {
+    position: static;
+    bottom: auto;
+    transform: none;
+    flex: none;
+    width: 100%;
+    gap: 0.6rem;
+    padding-bottom: 8px;             /* room for the active bar below */
+  }
+  .hero-thumb { width: 44px; height: 44px; }
+}
+
+/* Very short phones (≤700px tall, e.g. 360×640) — shrink the headline and the
+   cupcakes a touch instead of hiding anything, so it all still fits. */
+@media (max-width: 899px) and (max-height: 700px) {
+  :root { --slide-w: min(72vw, 32svh); }
+  .hero-headline { font-size: clamp(1.7rem, 7vw, 2.2rem); }
+  .hero { gap: 0.4rem; }
+}
+
+/* Extremely short phones (≤600px tall, e.g. 320×568) — tighten further so the
+   cupcake still fits its band with no overlap. Nothing is hidden. */
+@media (max-width: 899px) and (max-height: 600px) {
+  :root { --slide-w: min(66vw, 26svh); }
+  .hero-headline { font-size: clamp(1.5rem, 6.5vw, 2rem); }
+  .hero-info-desc { -webkit-line-clamp: 2; }
+  .hero { gap: 0.35rem; }
+}
